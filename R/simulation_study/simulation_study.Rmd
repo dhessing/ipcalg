@@ -1,12 +1,6 @@
 ---
 title: "IPC simulation study"
-output:
-html_document: default
-rmarkdown::html_vignette:
-    vignette: >
-        %\VignetteIndexEntry{IPC simulation study}
-        %\VignetteEngine{knitr::rmarkdown}
-        %\VignetteEncoding{UTF-8}
+output: html_document
 ---
 
 ```{r, include = FALSE}
@@ -22,7 +16,7 @@ library(knitr)
 library(pcalg)
 library(ipcalg)
 library(graph)
-source('../R/simulation_study/models.R')
+source('models.R')
 ```
 
 # Models
@@ -69,7 +63,7 @@ plot(as(matrix(total_effect_modification$IDAG,
 # Data
 ## Raw data
 ```{r}
-raw <- read_rds('../data/simulation_study.RDS')
+raw <- read_rds('../../data/simulation_study.RDS')
 kable(head(raw))
 ```
 
