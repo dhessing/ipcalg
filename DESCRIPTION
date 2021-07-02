@@ -1,0 +1,25 @@
+Package: ipcalg
+Type: Package
+Title: Causal discovery for IDAGs
+Version: 1.0
+Date: 2021-05-25
+Author: Dzjon Hessing
+Maintainer: Dzjon Hessing <email@dzjon.nl>
+Description: The IPC algorithm is a causal discovery algorithm for when
+    moderation is present in the underlying structural causal model.
+Depends: R (>= 3.5.0)
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports:
+    pcalg,
+    Deriv,
+    Rgraphviz
+Suggests: 
+    rmarkdown,
+    knitr,
+    testthat (>= 3.0.0),
+    tibble
+Config/testthat/edition: 3
+RoxygenNote: 7.1.1
+VignetteBuilder: knitr

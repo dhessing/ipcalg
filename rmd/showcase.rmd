@@ -1,0 +1,212 @@
+---
+title: "IPC algorithm showcase"
+author: Dzjon Hessing
+date: 08/06/2021
+output: html_notebook
+---
+```{r warning=FALSE,message=FALSE}
+library(ipcalg)
+library(tidyverse)
+```
+# Nilsson examples
+Here I show that the `ipc` algorithm can generate all the IDAGs in the Nilsson paper from data.
+In each case, we are interested in the causal relation between A and Y.
+For some examples, the CPDAG contains more than one possible DAG.
+In these cases, I have selected the right one by hand.
+
+## Figure 1
+An example of a standard directed acyclic graph (DAG) and two possible interaction DAGs (IDAGs)
+Variables A (warfarin) and Q (smoking) influence Y (ischaemic stroke).
+The first IDAG suggests that Q also influences the effect of A on Y,
+whereas the second suggests that this is not the case.
+
+### Interaction effect
+```{r}
+set.seed(42)
+n <- 1000
+alpha <- 0.01
+
+data <- tibble(
+  A = rnorm(n),
+  Q = rnorm(n),
+  Y = A + Q + A * Q + rnorm(n),
+)
+
+pc(
+  suffStat = list(C = cor(data), n = nrow(data)),
+  indepTest = gaussCItest,
+  alpha = alpha,
+  labels = colnames(data)
+) %>%
+  ipc(data, x = 'A', y = 'Y', alpha = alpha) %>%
+  plot()
+```
+
+### No interaction effect
+```{r}
+n <- 1000
+data <- tibble(
+  A = rnorm(n),
+  Q = rnorm(n),
+  Y = A + Q + rnorm(n),
+)
+
+pc(suffStat = list(C = cor(data), n = nrow(data)),
+   indepTest = gaussCItest,
+   alpha = alpha,
+   labels = colnames(data)) %>%
+  ipc(data, x = 'A', y = 'Y',) %>%
+  plot()
+```
+
+## Figure 2
+Confounded interaction or ‘effect modification by proxy’.
+A standard directed acyclic graph (DAG) is given in the left panel  and an interaction DAG (IDAG) in the right panel.
+Variables X (genotype) and A (bariatric surgery) influence Y (weight loss), with an interaction present.
+The effect of A is modified by Q (hair colour), but there is no interaction between A and Q.
+```{r}
+set.seed(42)
+n <- 1000
+data <- tibble(
+  X = rnorm(n),
+  Q = X + rnorm(n),
+  A = rnorm(n),
+  Y = X + A + A * X + rnorm(n)
+)
+
+pc(suffStat = list(C = cor(data), n = nrow(data)),
+   indepTest = gaussCItest,
+   alpha = alpha,
+   labels = colnames(data)) %>%
+  ipc(data, x = 'A', y = 'Y', alpha) %>%
+  plot(1)
+```
+## Figure 3
+Two examples of standard directed acyclic graphs (DAGs) (left) and two interaction DAGs (IDAGs) (right).
+The variable Y (a disease) is directly influenced by A (treatment), Q (smoking) and potentially also X (education).
+The first DAG is compatible with the first IDAG ,
+whereas the seconds DAG is compatible with either of the IDAGs.
+```{r}
+set.seed(42)
+n <- 1000
+data <- tibble(
+  X = rnorm(n),
+  Q = X + rnorm(n),
+  A = rnorm(n),
+  Y = Q + A + A * Q + rnorm(n)
+)
+
+pc(suffStat = list(C = cor(data), n = nrow(data)),
+   indepTest = gaussCItest,
+   alpha = alpha,
+   labels = colnames(data)) %>%
+  ipc(data, x = 'A', y = 'Y', alpha) %>%
+  plot(2)
+```
+
+## Simple summary
+We haven't looked at the `summary` function yet.
+Let's create a simple example.
+```{r}
+set.seed(42)
+alpha <- 0.01
+n <- 1000
+data <- tibble(
+  A = rnorm(n),
+  B = rnorm(n),
+  Y = A - B + 2 * A * B + rnorm(n),
+)
+
+ipc.fit <- pc(suffStat = list(C = cor(data), n = nrow(data)),
+              indepTest = gaussCItest,
+              alpha = alpha,
+              labels = colnames(data)) %>%
+  ipc(data, x = 'A', y = 'Y', alpha)
+
+plot(ipc.fit)
+```
+```{r}
+summary(ipc.fit)
+```
+
+The `summary` function gives an overview of the causal structure.
+For each DAG in the CPDAG it shows:
+
+- the estimated formula
+- the causal function
+- the ACE (as an expression)
+- the interaction effects stratified by quartile
+
+## Total effect modification
+
+```{r}
+set.seed(42)
+n <- 1000
+data <- tibble(
+  A = rnorm(n),
+  B = rnorm(n),
+  C = A + B + A * B + rnorm(n),
+  D = rnorm(n),
+  Y = C + D + rnorm(n)
+)
+
+pc(suffStat = list(C = cor(data), n = nrow(data)),
+   indepTest = gaussCItest,
+   alpha = alpha,
+   labels = colnames(data)) %>%
+  ipc(data, x = 'A', y = 'Y', alpha) %>%
+  plot()
+```
+The `summary` function shows the derived formulas from the DAG and IDAG, and
+the average causal effect as an expression.
+
+```{r}
+summary(ipc.fit)
+```
+
+
+## Confounder
+This shows an example where the calculated CPDAG gives many possible
+combinations.
+```{r}
+set.seed(42)
+n <- 1000
+data <- tibble(
+  C = rnorm(n),
+  A = C + rnorm(n),
+  Y = C + A + A * C + rnorm(n)
+)
+
+ipc.fit <- pc(
+  suffStat = list(C = cor(data), n = nrow(data)),
+  indepTest = gaussCItest,
+  alpha = alpha,
+  labels = colnames(data)) %>%
+  ipc(data, x = 'A', y = 'Y', alpha)
+
+plot(ipc.fit$pc.fit, main = "")
+plot(ipc.fit)
+summary(ipc.fit)
+```
+## Diamond
+```{r}
+set.seed(42)
+n <- 1000
+alpha <- 0.01
+data <- tibble(
+  A = rnorm(n),
+  B = A + rnorm(n),
+  D = rnorm(n),
+  C = A + D + rnorm(n),
+  Y = A + B + C + A * B + rnorm(n)
+)
+
+ipc.fit <- pc(
+  suffStat = list(C = cor(data), n = nrow(data)),
+  indepTest = gaussCItest,
+  alpha = alpha,
+  labels = colnames(data)) %>%
+  ipc(data, x = 'A', y = 'Y', alpha)
+plot(ipc.fit)
+summary(ipc.fit)
+```

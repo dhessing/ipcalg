@@ -1,0 +1,152 @@
+---
+title: "IPC simulation study"
+output:
+html_document: default
+rmarkdown::html_vignette:
+    vignette: >
+        %\VignetteIndexEntry{IPC simulation study}
+        %\VignetteEngine{knitr::rmarkdown}
+        %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, include = F}
+library(tidyverse)
+library(knitr)
+library(pcalg)
+library(ipcalg)
+library(graph)
+source('../R/simulation_study/models.R')
+```
+
+# Models
+
+## No interaction
+```{r echo = F}
+par(mfrow = c(1, 2))
+plot(as(matrix(no_modification$DAG,
+               3,
+               dimnames = list(c('A', 'Q', 'Y'),
+                               c('A', 'Q', 'Y'))), 'graphNEL'))
+plot(as(matrix(no_modification$IDAG,
+               2,
+               dimnames = list(c('Q', 'ΔY_A'),
+                               c('Q', 'ΔY_A'))), 'graphNEL'))
+```
+
+## Direct effect modification
+```{r echo = F}
+par(mfrow = c(1, 2))
+plot(as(matrix(effect_modification$DAG,
+               3,
+               dimnames = list(c('A', 'Q', 'Y'),
+                               c('A', 'Q', 'Y'))), 'graphNEL'))
+plot(as(matrix(effect_modification$IDAG,
+               2,
+               dimnames = list(c('Q', 'ΔY_A'),
+                               c('Q', 'ΔY_A'))), 'graphNEL'))
+```
+
+## Total effect modification
+```{r echo = F}
+par(mfrow = c(1, 2))
+plot(as(matrix(total_effect_modification$DAG,
+               5,
+               dimnames = list(c('A', 'Q', 'X', 'C', 'Y'),
+                               c('A', 'Q', 'X', 'C', 'Y'))), 'graphNEL'))
+plot(as(matrix(total_effect_modification$IDAG,
+               4,
+               dimnames = list(c('Q', 'X', 'C', 'ΔY_A'),
+                               c('Q', 'X', 'C', 'ΔY_A'))), 'graphNEL'))
+```
+
+# Data
+## Raw data
+```{r}
+raw <- read_rds('../data/simulation_study.RDS')
+kable(head(raw))
+```
+
+## Squared error
+```{r}
+ACE <- tribble(
+  ~model, ~Q.low, ~Q.average, ~Q.high,
+  'total effect modification', 0, 1, 2,
+  'direct effect modification', 0, 1, 2,
+  'no effect modification', 1, 1, 1
+)
+
+SE <- raw %>%
+  left_join(ACE, by = 'model') %>%
+  mutate(model = factor(model, levels = c('no effect modification', 'direct effect modification', 'total effect modification'))) %>%
+  mutate(across(ends_with(".low"), ~(. - Q.low)^2),
+         across(ends_with(".average"), ~(. - Q.average)^2),
+         across(ends_with(".high"), ~(. - Q.high)^2)) %>%
+  select(-Q.low, -Q.average, -Q.high)
+kable(head(SE))
+```
+# Summary
+```{r}
+RMSE <- SE %>%
+  group_by(model, sample.size) %>%
+  summarize(across(starts_with("pc"), ~sqrt(mean(.))),
+            across(starts_with("ipc"), ~sqrt(mean(.))),
+            across(c(DAG.incorrect, IDAG.incorrect), sum))
+kable(RMSE, digits = 4)
+```
+
+## PC: RMSE
+```{r fig.height = 3}
+RMSE %>%
+  filter(sample.size == 2000) %>%
+  pivot_longer(cols = starts_with('pc'),
+               names_prefix = 'pc.',
+               names_to = 'Q.level',
+               values_to = 'RMSE') %>%
+  mutate(Q.level = factor(Q.level, levels = c('low', 'average', 'high'))) %>%
+  ggplot(aes(x = Q.level, y = RMSE)) +
+  theme_minimal() +
+  scale_fill_grey() +
+  geom_col(aes(fill = model)) +
+  coord_cartesian(ylim = c(0, 1.2)) +
+  facet_wrap('model')
+```
+
+
+## IPC: RMSE
+```{r fig.height = 3}
+RMSE %>%
+  filter(sample.size == 2000) %>%
+  pivot_longer(cols = starts_with('ipc'),
+               names_prefix = 'ipc.',
+               names_to = 'Q.level',
+               values_to = 'RMSE') %>%
+  mutate(Q.level = factor(Q.level, levels = c('low', 'average', 'high'))) %>%
+  ggplot(aes(x = Q.level, y = RMSE, fill = model)) +
+  theme_minimal() +
+  scale_fill_grey() +
+  geom_col() +
+  coord_cartesian(ylim = c(0, 1.2)) +
+  facet_wrap('model')
+```
+
+```{r fig.height = 3}
+RMSE %>%
+  mutate(sample.size = factor(sample.size)) %>%
+  ggplot(aes(x = sample.size, y = ipc.average, fill = model)) +
+  geom_col(position = 'dodge') +
+  theme_minimal() +
+  scale_fill_grey() +
+  expand_limits(y = 0)
+```
+
+```{r}
+sessionInfo()
+```
+

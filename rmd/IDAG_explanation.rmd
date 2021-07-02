@@ -1,0 +1,176 @@
+---
+title: "IDAG explanation"
+author: Dzjon
+date: 09/06/2021
+output: html_notebook
+---
+
+```{r echo = FALSE, warning=FALSE,message=FALSE}
+library(tidyverse)
+library(ipcalg)
+library(pcalg)
+```
+
+
+# Definition
+We will denote a causal effect of $A$ on $Y$ by $\Delta Y_A$.
+We refer to a graph including $\Delta Y_A$ as an IDAG.
+If there is an interaction between some variable and A, there is a directed
+arrow (or path) from this variable to $\Delta Y_A$.
+In contrast, effect measure modification only corresponds to an association
+between some variable and $\Delta Y_A$. [Nilsson]
+
+## Types of effect modification.
+According to [VanderWeele], there are four types of effect modification.
+In these examples we have intervention $A$ and outcome variable $Y$.
+$Q$ and $A$ have a direct effect on $Y$, and there is an interaction effect
+between $Q$ and $A$.
+
+## No effect modification
+```{r, echo = F }
+set.seed(42)
+n <- 1000
+alpha <- 0.01
+data <- tibble(
+  A = rnorm(n),
+  Q = rnorm(n),
+  Y = A + Q + rnorm(n),
+)
+
+pc(suffStat = list(C = cor(data), n = nrow(data)),
+  indepTest = gaussCItest,
+  alpha = alpha,
+  labels = colnames(data)) %>%
+  ipc(data, x = 'A', y = 'Y', alpha = alpha) %>%
+  plot()
+```
+
+
+### Direct effect modification
+```{r, echo = F }
+set.seed(42)
+n <- 1000
+alpha <- 0.01
+data <- tibble(
+  A = rnorm(n),
+  Q = rnorm(n),
+  Y = A + Q + A * Q + rnorm(n),
+)
+
+pc(suffStat = list(C = cor(data), n = nrow(data)),
+  indepTest = gaussCItest,
+  alpha = alpha,
+  labels = colnames(data)) %>%
+  ipc(data, x = 'A', y = 'Y', alpha = alpha) %>%
+  plot()
+```
+
+We call $Q$ a direct effect modifier for the causal effect of $A$ on $Y$,
+because $A$ is a direct cause of $Y$.
+This is represented in the IDAG as an arrow from $Q$ to $\Delta Y_A$.
+
+## Indirect effect modification
+
+```{r, echo = F }
+set.seed(42)
+n <- 1000
+alpha <- 0.01
+data <- tibble(
+  A = rnorm(n),
+  C = rnorm(n),
+  Q = C + rnorm(n),
+  Y = A + Q + A * Q + rnorm(n),
+)
+
+pc(suffStat = list(C = cor(data), n = nrow(data)),
+  indepTest = gaussCItest,
+  alpha = alpha,
+  labels = colnames(data)) %>%
+  ipc(data, x = 'A', y = 'Y', alpha = alpha) %>%
+  plot(2)
+```
+We say that $C$ is an indirect effect modifier for the causal effect of $A$ on $Y$,
+since $C$ affects $Y$ indirectly through $Q$.
+This is represented in the IDAG as an arrow from $C$ to $Q$.
+
+
+## Effect modification by proxy
+
+```{r echo = FALSE}
+pc(suffStat = list(C = cor(data), n = nrow(data)),
+  indepTest = gaussCItest,
+  alpha = alpha,
+  labels = colnames(data)) %>%
+  ipc(data, x = 'A', y = 'Y', alpha = alpha) %>%
+  plot(1)
+```
+
+$X$ is an effect modifier for the causal effect of $A$ on $Y$
+because $X$ contains information about $Q$ (which serves a direct effect modifier
+for the causal effect of $A$ on $Y$).
+However, because $R$ is not a cause of $A$, we say that $X$ is an effect
+modifier by proxy.
+This is represented in the IDAG as an arrow from $X$ to $R$.
+
+## Effect modification by common cause
+```{r echo = FALSE}
+set.seed(42)
+n <- 1000
+alpha <- 0.01
+data <- tibble(
+  A = rnorm(n),
+  C = rnorm(n),
+  X = C + rnorm(n),
+  Q = C + rnorm(n),
+  Y = A + Q + A * Q + rnorm(n),
+)
+
+pc(suffStat = list(C = cor(data), n = nrow(data)),
+  indepTest = gaussCItest,
+  alpha = alpha,
+  labels = colnames(data)) %>%
+  ipc(data, x = 'A', y = 'Y', alpha = alpha) %>%
+  plot(2)
+```
+Because $X$ contains information about $C$ which is a cause of the direct
+effect modifier $Q$, we call $X$ an effect modifier by common cause of the
+effect of $A$ on $Y$.
+
+## Total effect modification
+```{r echo = FALSE}
+set.seed(42)
+n <- 1000
+alpha <- 0.01
+data <- tibble(
+  A = rnorm(n),
+  Q = rnorm(n),
+  C = rnorm(n),
+  X = A + A * Q + Q + rnorm(n),
+  Y = X + C + rnorm(n),
+)
+
+pc(suffStat = list(C = cor(data), n = nrow(data)),
+  indepTest = gaussCItest,
+  alpha = alpha,
+  labels = colnames(data)) %>%
+  ipc(data, x = 'A', y = 'Y', alpha = alpha) %>%
+  plot()
+```
+```{r echo = FALSE}
+set.seed(42)
+n <- 1000
+alpha <- 0.01
+data <- tibble(
+  A = rnorm(n),
+  B = rnorm(n),
+  C = rnorm(n),
+  Y = A + B + C + A*B + rnorm(n),
+)
+
+pc(suffStat = list(C = cor(data), n = nrow(data)),
+  indepTest = gaussCItest,
+  alpha = alpha,
+  labels = colnames(data)) %>%
+  ipc(data, x = 'A', y = 'Y', alpha = alpha) %>%
+  plot()
+```

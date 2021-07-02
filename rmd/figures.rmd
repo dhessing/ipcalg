@@ -1,0 +1,36 @@
+---
+title: "R Notebook"
+author: dzjon
+date: 21/06/2021
+output: html_notebook
+---
+```{r}
+library(graph)
+```
+
+```{r}
+plot(as(matrix(c(0, 0, 0, 0,
+                 0, 0, 1, 0,
+                 0, 0, 0, 0,
+                 1, 1, 0, 0),
+               4,
+               dimnames = list(c('A', 'Q', 'C', 'Y'),
+                               c('A', 'Q', 'C', 'Y'))), 'graphNEL'))
+```
+```{r}
+plot(as(matrix(c(0, 0, 0, 0,
+                 0, 0, 0, 0,
+                 0, 0, 0, 0,
+                 1, 1, 1, 0),
+               4,
+               dimnames = list(c('A', 'B', 'C', 'Y'),
+                               c('A', 'B', 'C', 'Y'))), 'graphNEL'))
+```
+```{r}
+plot(as(matrix(c(0, 0, 0,
+                 0, 0, 0,
+                 1, 0, 0),
+               3,
+               dimnames = list(c('B', 'C', 'ΔY_A'),
+                               c('B', 'C', 'ΔY_A'))), 'graphNEL'))
+```
